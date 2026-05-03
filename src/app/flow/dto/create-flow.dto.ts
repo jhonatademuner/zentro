@@ -9,15 +9,15 @@ import {
   ArrayMinSize,
 } from 'class-validator';
 import { Type } from 'class-transformer';
-import { FlowType, StepMethod } from '../flow.entity';
+import { FlowType, HttpMethod } from '@core/enums';
 
 export class CreateFlowStepDto {
   @IsString()
   @IsNotEmpty()
   readonly stepId!: string;
 
-  @IsEnum(StepMethod)
-  readonly method!: StepMethod;
+  @IsEnum(HttpMethod)
+  readonly method!: HttpMethod;
 
   @IsString()
   @IsNotEmpty()

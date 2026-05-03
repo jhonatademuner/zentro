@@ -6,26 +6,14 @@ import {
   UpdateDateColumn,
   ObjectId,
 } from 'typeorm';
-
-export enum FlowType {
-  QUERY = 'QUERY',
-  COMMAND = 'COMMAND',
-}
-
-export enum StepMethod {
-  GET = 'GET',
-  POST = 'POST',
-  PUT = 'PUT',
-  PATCH = 'PATCH',
-  DELETE = 'DELETE',
-}
+import { FlowType, HttpMethod } from '@core/enums';
 
 export class FlowStep {
   @Column()
   stepId!: string;
 
-  @Column({ type: 'enum', enum: StepMethod })
-  method!: StepMethod;
+  @Column({ type: 'enum', enum: HttpMethod })
+  method!: HttpMethod;
 
   @Column()
   url!: string;
