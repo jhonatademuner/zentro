@@ -1,118 +1,148 @@
-# Zentro — Dynamic BFF Execution Engine
+# Zentro
 
-Motor de execução declarativo para composição Backend-for-Frontend. O Zentro orquestra chamadas a múltiplos serviços backend através de uma DSL de fluxos (flows), resolve dependências entre steps, executa steps independentes em paralelo e compõe uma resposta unificada.
+Zentro is a declarative BFF execution engine built with NestJS and MongoDB. It lets you define flows made of HTTP steps, execute them with input data, and shape the final response with a simple mapping object.
 
-## Arquitetura
+## Overview
 
-```
-┌──────────────────────────────────────────────────────┐
-│  HTTP Layer — NestJS  (src/app/)                     │
-│                                                      │
-│  ┌──────────────────┐    ┌──────────────────────┐    │
-│  │ FlowController   │    │ ExecutionController  │    │
-│  │ /v1/flows        │    │ /v1/executions       │    │
-│  └────────┬─────────┘    └──────────┬───────────┘    │
-│           │                         │                │
-│  ┌────────▼─────────┐    ┌──────────▼───────────┐    │
-│  │ FlowService      │    │ ExecutionService     │    │
-│  └────────┬─────────┘    └──────────┬───────────┘    │
-│           │                         │                │
-│  ┌────────▼─────────────────────────▼───────────┐    │
-│  │         TypeORM — MongoRepository            │    │
-│  └──────────────────────────────────────────────┘    │
-│                                                      │
-├──────────────────────────────────────────────────────┤
-│  Core Engine — Pure TypeScript  (src/core/)          │
-│                                                      │
-│  ┌──────────────┐  ┌────────────────┐                │
-│  │ FlowEngine   │  │ ResponseEngine │                │
-│  └──────────────┘  └────────────────┘                │
-│  ┌──────────────┐                                    │
-│  │ HttpExecutor │                                    │
-│  └──────────────┘                                    │
-│                                                      │
-│  Zero NestJS dependencies. Testável de forma isolada │
-└──────────────────────────────────────────────────────┘
+- NestJS provides the HTTP API and persistence layer.
+- The core execution engine lives in `src/core/`.
+- Flow definitions are stored in MongoDB through TypeORM.
+- Mongo `_id` values are UUIDs.
+- Failed executions are persisted in `execution_errors` for inspection.
+
+## Project Structure
+
+```text
+src/
+├── app/
+│   ├── common/
+│   ├── execution-error/
+│   ├── flow/
+│   └── modules/
+├── core/
+│   ├── engines/
+│   ├── enums/
+│   └── executors/
+└── main.ts
 ```
 
-## Princípio Central
+## Requirements
 
-O NestJS é usado **apenas** como camada HTTP fina. O core engine (`src/core/`) não tem nenhum import ou decorator do NestJS — pode ser usado standalone.
+- Node.js 18+
+- MongoDB
 
-## Quick Start
+## Getting Started
 
 ```bash
-# Instalar dependências
 npm install
-
-# Subir em modo dev (watch)
 npm run start:dev
+```
 
-# Build de produção
+Build for production:
+
+```bash
 npm run build
 npm run start:prod
 ```
 
-## Variáveis de Ambiente
+## Environment Variables
 
-| Variável    | Descrição                  | Default                          |
-|-------------|----------------------------|----------------------------------|
-| `PORT`      | Porta do servidor HTTP     | `3000`                           |
-| `MONGO_URI` | Connection string MongoDB  | `mongodb://localhost:27017`      |
-| `MONGO_DB`  | Nome do banco              | `ZENTRO`                         |
-
-## Estrutura do Projeto
-
-```
-src/
-├── core/                          # DOMÍNIO PURO — sem NestJS
-│   ├── engines/
-│   │   ├── flow.engine.ts         # Motor de execução de fluxos
-│   │   └── response.engine.ts     # Composição de resposta
-│   ├── executors/
-│   │   └── http.executor.ts       # Executor de chamadas HTTP
-│   └── index.ts                   # Barrel export do core
-│
-├── app/                           # Camada HTTP — NestJS
-│   ├── flow/
-│   │   ├── flow.controller.ts     # CRUD /v1/flows
-│   │   ├── flow.service.ts        # Lógica de persistência
-│   │   ├── flow.entity.ts         # Entidade TypeORM (MongoDB)
-│   │   ├── flow.mapper.ts         # Entity → Response DTO
-│   │   ├── flow.module.ts
-│   │   └── dto/
-│   │       ├── create-flow.dto.ts
-│   │       ├── update-flow.dto.ts
-│   │       └── flow-response.dto.ts
-│   │
-│   ├── execution/
-│   │   ├── execution.controller.ts  # GET /v1/executions
-│   │   ├── execution.service.ts
-│   │   ├── execution.entity.ts
-│   │   ├── execution.mapper.ts
-│   │   ├── execution.module.ts
-│   │   └── dto/
-│   │       └── execution-response.dto.ts
-│   │
-│   └── modules/
-│       └── app.module.ts          # Módulo raiz (TypeORM + módulos)
-│
-└── main.ts                        # Bootstrap NestJS
-```
+| Variable | Description | Default |
+| --- | --- | --- |
+| `PORT` | HTTP server port | `3000` |
+| `MONGO_URI` | MongoDB connection string | `mongodb://localhost:27017` |
+| `MONGO_DB` | Database name | `ZENTRO` |
 
 ## API
 
-### Flows — `/v1/flows`
+### Flows
 
-| Método   | Rota            | Descrição              |
-|----------|-----------------|------------------------|
-| `POST`   | `/v1/flows`     | Criar um flow          |
-| `GET`    | `/v1/flows`     | Listar todos os flows  |
-| `GET`    | `/v1/flows/:id` | Buscar flow por ID     |
-| `PATCH`  | `/v1/flows/:id` | Atualizar flow parcial |
-| `DELETE` | `/v1/flows/:id` | Remover flow           |
+| Method | Route | Description |
+| --- | --- | --- |
+| `POST` | `/v1/flows` | Create a flow |
+| `GET` | `/v1/flows` | List all flows |
+| `GET` | `/v1/flows/:id` | Get a flow by UUID `_id` |
+| `PATCH` | `/v1/flows/:id` | Partially update a flow by UUID `_id` |
+| `DELETE` | `/v1/flows/:id` | Delete a flow by UUID `_id` |
+| `POST` | `/v1/flows/:id/execute` | Execute a flow by UUID `_id` |
 
-#### Exemplo — Criar Flow
+### Execution Errors
+
+| Method | Route | Description |
+| --- | --- | --- |
+| `GET` | `/v1/execution-errors` | List failed executions |
+| `GET` | `/v1/execution-errors/:id` | Get a failed execution by UUID `_id` |
+
+## Flow Definition
+
+Flows are stored with steps keyed by `stepId`.
+
+```json
+{
+  "name": "get-user-dashboard",
+  "type": "QUERY",
+  "steps": {
+    "user": {
+      "method": "GET",
+      "url": "http://users-service/users/{input.userId}"
+    },
+    "orders": {
+      "method": "GET",
+      "url": "http://orders-service/orders",
+      "params": {
+        "userId": "{steps.user.id}"
+      }
+    }
+  },
+  "responseConfig": {
+    "mapping": {
+      "user": "steps.user",
+      "orders": "steps.orders"
+    }
+  }
+}
+```
+
+### Step Fields
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `method` | `GET \| POST \| PUT \| PATCH \| DELETE` | Yes | HTTP method |
+| `url` | `string` | Yes | Target URL |
+| `headers` | `Record<string, string>` | No | Request headers |
+| `body` | `Record<string, any>` | No | Request body |
+| `params` | `Record<string, any>` | No | Query string parameters |
+| `nextSteps` | `string[]` | No | Reserved metadata for future dependency scheduling |
+
+## Templates
+
+Zentro resolves placeholders against an execution context with this shape:
+
+```json
+{
+  "input": {},
+  "steps": {}
+}
+```
+
+Recommended placeholder syntax:
+
+- `{input.userId}`
+- `{steps.user.id}`
+
+Legacy `{{path.to.value}}` placeholders are also accepted for backward compatibility.
+
+## Execution Semantics
+
+- Steps are currently executed in declaration order.
+- Each successful step stores its response body under `steps.<stepId>`.
+- If any upstream request returns a non-2xx response, the step is marked as failed and the execution is stored in `execution_errors`.
+- If `responseConfig.mapping` is present, the execute endpoint returns the mapped output.
+- If `responseConfig.mapping` is omitted, the execute endpoint returns all step payloads keyed by step id.
+
+## Example Requests
+
+Create a flow:
 
 ```bash
 curl -X POST http://localhost:3000/v1/flows \
@@ -120,84 +150,40 @@ curl -X POST http://localhost:3000/v1/flows \
   -d '{
     "name": "get-user-dashboard",
     "type": "QUERY",
-    "steps": [
-      {
-        "stepId": "user",
+    "steps": {
+      "user": {
         "method": "GET",
-        "url": "http://users-service/users/{input.userId}",
-        "nextSteps": ["orders"]
+        "url": "http://users-service/users/{input.userId}"
       },
-      {
-        "stepId": "orders",
+      "orders": {
         "method": "GET",
-        "url": "http://orders-service/orders?userId={steps.user.id}"
+        "url": "http://orders-service/orders",
+        "params": {
+          "userId": "{steps.user.id}"
+        }
       }
-    ],
+    },
     "responseConfig": {
       "mapping": {
-        "name": "steps.user.name",
+        "user": "steps.user",
         "orders": "steps.orders"
       }
     }
   }'
 ```
 
-### Executions — `/v1/executions`
+Execute a flow:
 
-| Método | Rota                  | Descrição                  |
-|--------|-----------------------|----------------------------|
-| `GET`  | `/v1/executions`      | Listar todas as execuções  |
-| `GET`  | `/v1/executions/:id`  | Buscar execução por ID     |
-
-## DSL — Modelo de Flow
-
-```jsonc
-{
-  "name": "get-user-dashboard",
-  "type": "QUERY",              // QUERY | COMMAND
-  "steps": [
-    {
-      "stepId": "user",
-      "method": "GET",          // GET | POST | PUT | PATCH | DELETE
-      "url": "http://users-service/users/{input.userId}",
-      "headers": {},            // opcional
-      "body": {},               // opcional
-      "params": {},             // opcional
-      "nextSteps": ["orders"]   // opcional — dependências
-    }
-  ],
-  "responseConfig": {           // opcional
-    "mapping": {
-      "name": "steps.user.name",
-      "orders": "steps.orders"
-    }
-  }
-}
+```bash
+curl -X POST http://localhost:3000/v1/flows/<flow-id>/execute \
+  -H "Content-Type: application/json" \
+  -d '{
+    "userId": "123"
+  }'
 ```
 
-## Modelo de Execução (planejado)
+## Notes
 
-1. Receber input e montar contexto `{ input, steps: {} }`
-2. Ordenar steps topologicamente em camadas paralelas
-3. Executar cada camada (`Promise.all` para steps independentes)
-4. Armazenar resultado de cada step no contexto
-5. Mapear a resposta final usando `responseConfig.mapping`
-
-## Tech Stack
-
-| Camada       | Tecnologia                          |
-|--------------|-------------------------------------|
-| Runtime      | Node.js + TypeScript (strict)       |
-| HTTP         | NestJS 10                           |
-| Persistência | MongoDB via TypeORM                 |
-| Validação    | class-validator + class-transformer |
-| HTTP Client  | undici (connection pooling)         |
-
-## Scripts
-
-| Comando            | Descrição                           |
-|--------------------|-------------------------------------|
-| `npm run build`    | Compila o projeto                   |
-| `npm run start`    | Inicia em modo produção             |
-| `npm run start:dev`| Inicia em modo dev com watch        |
-| `npm run start:prod`| Inicia a partir do build (`dist/`) |
+- Flow ids and execution error ids exposed by the API are the Mongo `_id` values, generated as UUID strings.
+- The app uses Axios through `@nestjs/axios` for outbound HTTP calls.
+- There is currently no automated test suite in the repository.

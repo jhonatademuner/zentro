@@ -1,4 +1,4 @@
 export enum FlowType {
-  QUERY = 'QUERY',
-  COMMAND = 'COMMAND',
+	QUERY = 'QUERY',
+	COMMAND = 'COMMAND',
 }

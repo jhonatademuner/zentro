@@ -1,61 +1,54 @@
-import {
-  Entity,
-  ObjectIdColumn,
-  Column,
-  CreateDateColumn,
-  UpdateDateColumn,
-  ObjectId,
-} from 'typeorm';
-import { FlowType, HttpMethod } from '@core/enums';
+import {Column, CreateDateColumn, Entity, ObjectIdColumn, UpdateDateColumn,} from 'typeorm';
+import {Command, FlowType, HttpMethod} from '@core/enums';
 
-export class FlowStep {
-  @Column()
-  stepId!: string;
+export class StepConfig {
+	@Column({nullable: true})
+	command?: Command;
 
-  @Column({ type: 'enum', enum: HttpMethod })
-  method!: HttpMethod;
+	@Column()
+	method!: HttpMethod;
 
-  @Column()
-  url!: string;
+	@Column()
+	url!: string;
 
-  @Column({ type: 'json', nullable: true })
-  headers?: Record<string, string>;
+	@Column({nullable: true})
+	headers?: Record<string, string>;
 
-  @Column({ type: 'json', nullable: true })
-  body?: Record<string, any>;
+	@Column({nullable: true})
+	body?: Record<string, any>;
 
-  @Column({ type: 'json', nullable: true })
-  params?: Record<string, any>;
+	@Column({nullable: true})
+	params?: Record<string, any>;
 
-  @Column({ type: 'simple-array', nullable: true })
-  nextSteps?: string[];
+	@Column({nullable: true})
+	nextSteps?: string[];
 }
 
-export class FlowResponseConfig {
-  @Column({ type: 'json' })
-  mapping!: Record<string, any>;
+export class ResultConfig {
+	@Column()
+	mapping!: Record<string, any>;
 }
 
 @Entity('flows')
 export class Flow {
-  @ObjectIdColumn()
-  _id!: ObjectId;
+	@ObjectIdColumn()
+	_id!: string;
 
-  @Column()
-  name!: string;
+	@Column()
+	name!: string;
 
-  @Column({ type: 'enum', enum: FlowType })
-  type!: FlowType;
+	@Column()
+	type!: FlowType;
 
-  @Column(() => FlowStep)
-  steps!: FlowStep[];
+	@Column()
+	steps!: Record<string, StepConfig>;
 
-  @Column(() => FlowResponseConfig)
-  responseConfig!: FlowResponseConfig;
+	@Column({nullable: true})
+	resultConfig?: ResultConfig;
 
-  @CreateDateColumn()
-  createdAt!: Date;
+	@CreateDateColumn()
+	createdAt!: Date;
 
-  @UpdateDateColumn()
-  updatedAt!: Date;
+	@UpdateDateColumn()
+	updatedAt!: Date;
 }
